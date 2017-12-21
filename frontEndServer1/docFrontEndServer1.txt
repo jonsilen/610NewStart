@@ -1,0 +1,101 @@
+
+This will be my front end server(ec2-18-218-23-73.us-east-2.compute.amazonaws.com ), which I called Server 1 in my AWS.
+
+The first thiing I did was install apache2
+	sudo apt-get update
+	sudo apt-get install apache2
+	sudo systemctl restart apache2
+	
+Then I checked the system to see if it was running
+	sudo systemctl status apache2
+Should responsed with => active (running)
+   
+
+My Server Logs are held by default:
+
+	/var/log/apache2/accesslog:By default, every request to your web server is recorded in this log file unless Apache is configured to do otherwise.
+
+	/var/log/apache2/error.lo:By default, all errors are recorded in this file. The LogLevel directive in the Apache configuration specifies how much detail the error logs will contain.
+
+Then I installed my Nagios Agent NRPE
+  
+	sudo apt-get install nagios-nrpe-server nagios-plugins
+
+I had to change the server_address to my DNS of my nagios core server with was:ec2-18-217-42-109.us-east-2.compute.amazonaws.com
+
+	sudo vim /etc/nagios/nrpe.cfg
+	sudo service nagios-nrpe-server restart
+	sudo service apache2 restart
+	sudo service nagios restart
+I created a Self-Signed SSL Certification for Apache
+
+	sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/apache-selfsigned.key -out /etc/ssl/certs/apache-selfsigned.crt
+
+Fill out what is prompted
+
+Create a Diffie-Hellman group, which is used in negotiating perfect forward secrecy wih clients
+
+	sudo openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
+
+Make sure => SSLOpenSSLConfCmd DHParameters "/etc/ssl/certs/dhparam.pem"  	
+	sudo vim /etc/apache2/conf-available/ssl-params.conf
+
+Back up the file
+	sudo cp /etc/apache2/sites-available/default-ssl.conf /etc/apache2/sites-available/default-ssl.conf.bak
+ 
+Make these changes to file:
+<IfModule mod_ssl.c>
+        <VirtualHost _default_:443>
+                ServerAdmin your_email@example.com
+                ServerName server_domain_or_IP
+
+                DocumentRoot /var/www/html
+
+                ErrorLog ${APACHE_LOG_DIR}/error.log
+                CustomLog ${APACHE_LOG_DIR}/access.log combined
+
+                SSLEngine on
+
+                SSLCertificateFile      /etc/ssl/certs/apache-selfsigned.crt
+                SSLCertificateKeyFile /etc/ssl/private/apache-selfsigned.key
+
+                <FilesMatch "\.(cgi|shtml|phtml|php)$">
+                                SSLOptions +StdEnvVars
+                </FilesMatch>
+                <Directory /usr/lib/cgi-bin>
+                                SSLOptions +StdEnvVars
+                </Directory>
+
+                BrowserMatch "MSIE [2-6]" \
+                               nokeepalive ssl-unclean-shutdown \
+                               downgrade-1.0 force-response-1.0
+
+        </VirtualHost>
+</IfModule>
+
+
+	sudo vim /etc/apache2/sites-available/default-ssl.conf
+
+Redirect to the https domain
+
+<VirtualHost *:80>
+        . . .
+
+        Redirect "/" "https://your_domain_or_IP/"
+
+        . . .
+</VirtualHost>
+
+	sudo vim /etc/apache2/sites-available/000-default.conf
+
+Enable the changes in Apache2
+
+	sudo a2enmod ssl
+	sudo a2enmod headers
+	sudo a2ensite default-ssl
+	sudo a2enconf ssl-params
+
+Test for syntax errors
+
+	sudo apache2ctl configtest
+	sudo apache2 restart

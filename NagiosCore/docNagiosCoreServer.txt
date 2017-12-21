@@ -1,0 +1,158 @@
+This will be my Nagios Core Server(ec2-18-217-42-109.us-east-2.compute.amazonaws.com)
+
+Make a git directory to store all of my nagios files
+
+	mkdir git
+	cd git
+
+Install Nagios L.A.M.P stack
+
+	sudo apt-get install wget build-essential apache2 php apche2-mod-php7.0 php-gd libgd-dev sendmail unzip
+
+Create new user group for Nagios
+
+	sudo useradd nagios
+	sudo groupadd nagcmd
+	sudo usermod -a -G nagcmd nagios
+	sudo usermod -a -G nagios,nagcmd www-data
+
+Download and extract Nagios Core
+
+	wget https://assets.nagios.com/downloads/nagioscore/releases/nagios-4.2.0.tar.gz
+	sudo tar -xzf nagios*.tar.gz
+	cd nagios-4.2.0
+Compile Nagios with the user and user group
+ 
+   sudo ./configure --with-nagios-group=nagios --with-command-group=nagcmd
+
+Install Nagios
+	sudo make all
+	sudo make install
+	sudo make install-commandmode
+	sudo make install-init
+	sudo make install-config
+	sudo /usr/bin/install -c -m 644 sample-config/httpd.conf /etc/apache2/sites-available/nagios.conf
+
+Copy eventhandler directory to the nagios directory
+
+	sudo cp -R contrib/eventhandlers/ /usr/local/nagios/libexec/
+	sudo chown -R nagios:nagios /usr/local/nagios/libexec/eventhandlers
+24  sudo /usr/bin/install -c -m 644 sample-config/httpd.conf /etc/apache2/sites-availab
+le/nagios.conf
+
+Install the NAgios Plugins
+	cd ..
+	sudo wget https://nagios-plugins.org/download/nagios-plugins-2.1.2.tar.gz
+	sudo tar -xzf nagios-plugins*.tar.gz
+	cd nagios-plugin-2.1.2/
+	sudo ./configure --with-nagios-user=nagios --with-nagios-group=nagios --with-openssl
+	sudo make
+	sudo make install
+
+Uncomment line 51 for the host monitor config
+
+	sudo vim /usr/local/nagios/etc/nagios.cfg
+then
+	sudo mkdir -p /usr/local/nagios/etc/servers
+
+Change the default email to mine
+
+	sudo vim /usr/local/nagios/etc/objects/contacts.cfg
+
+Config Apache
+
+	sudo a2enmod rewrite
+	sudo service apache2 restart
+	sudo a2enmod rewrite
+	sudo a2enmod cgi
+	sudo service apache2 restart
+
+Create a password for Nagios
+
+	sudo htpasswd -c /usr/local/nagios/etc/htpasswd.usudo service apache2 restart
+
+Start Nagios
+
+	sudo service nagios start
+If Nagios failed foloow the next 4 steps...
+
+	sudo cd /etc/init.d/
+	sudo cp /etc/init.d/skeleton /etc/init.d/nagios
+Edit file with the following:
+DESC="Nagios"
+NAME=nagios
+DAEMON=/usr/local/nagios/bin/$NAME
+DAEMON_ARGS="-d /usr/local/nagios/etc/nagios.cfg"
+PIDFILE=/usr/local/nagios/var/$NAME.lock
+
+	sudo vim /etc/init.d/nagios
+	sudo chmod +x /etc/init.d/nagios
+	sudo service apache2 restart
+	sudo service nagios start
+
+If fails again edit the nagios.service
+
+	sudo vim /etc/systemd/system/nagios.service
+	sudo systemctl enable /etc/systemd/system/nagios.service
+	sudo systemctl  start nagios
+	sudo systemctl  restart nagios
+
+Install PHP for apache2 and mysql in order to work
+
+	sudo apt-get install php libapache2-mod-php php-mcrypt php-mysql
+	sudo apt-get install mysql-server
+	sudo service apache2 restart
+	sudo systemctl restart nagios
+   	sudo make
+   	sudo make install
+
+Install NRPE
+
+	sudo apt-get install nagios-nrpe-server nagios-plugins
+
+Change Nagios server IP to the DNS of my Nagios Core
+
+	sudo vim /etc/nagios/nrpe.cfg
+	sudo service nagios-nrpe-server restart
+Config to monitor Server 1
+	sudo vim /usr/local/nagios/etc/servers/server1.cfg
+
+Create Another config file for Server 2
+
+	sudo cp /usr/local/nagios/etc/servers/server1.cfg  /usr/local/nagios/etc/servers/server2.cfg
+	sudo sed -i 's/Server_1/Server_2/'  /usr/local/nagios/etc/servers/server2.cfg
+	sudo vim  /usr/local/nagios/etc/servers/server2.cfg
+  	sudo service nagios restart
+  	sudo service apache2 restart
+
+Edit the check_eth file
+
+	sudo vim /usr/local/nagios/libexec/check_eth
+
+Edit the commands
+
+	sudo vim /usr/local/nagios/etc/objects/commands.cfg
+
+Change check_eth so it can be acessable everywhere
+
+  	sudo chmod 755 check_eth
+  	sudo service apache2 restart
+  	sudo service nagios restart
+ 
+Install SSMTP to allow email alerts
+
+	sudo apt-get install ssmtp
+
+Change email to mine
+
+  	sudo vim /etc/ssmtp/ssmtp.conf
+	echo "Test message from Linux server using ssmtp" | sudo ssmtp -vvv bvanwallace@gmail.com
+
+	sudo vim contacts.cfg
+	sudo vim commands.cfg
+  	sudo service apache2 restart
+  	sudo service nagios restart
+ 
+  182  cd /git
+  183  cd git
+  184  cd ~

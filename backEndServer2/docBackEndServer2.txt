@@ -1,0 +1,39 @@
+This will be my front end server(ec2-18-217-219-13.us-east-2.compute.amazonaws.com ), which I called Server 2 in my AWS.
+
+I intalled my Nagios Agent NRPE
+
+	sudo apt-get install nagios-nrpe-server nagios-plugins
+
+I had to change the server_address to my DNS of my nagios core server with: ec2-18-217-42-109.us-east-2.compute.amazonaws.com
+   
+	sudo vim /etc/nagios/nrpe.cfg
+	sudo service nagios-nrpe-server restart
+
+I installed MySQL
+
+	sudo apt-get update
+	sudo apt-get install mysql-server
+	sudo systemctl start mysql
+	sudo mysqladmin -p -u
+	sudo mysqladmin -p -u root
+
+Logged in and created a new database called NJIT and created/added a new table 
+
+	mysql -u root -p
+
+Logged out of sql and "dumped" the contents of the database to a file called dumpNJIT.sql
+(I did this to test)
+	mysqldump -u root -p NJIT > dumpNJIT.sql
+	vim dumpNJIT.sql
+
+Exit out of the "test dump file"
+Created a directory that with hold the backup data
+	mkdir backupDB
+
+I created a bash script that will backup the database in the backupDB directory and will delete the oldest file in the database on the 8th time it was backedup
+
+	sudo vim backup.sh
+
+I created a crontab that will run the bash script backup everyday at 8am
+
+	sudo crontab -e
